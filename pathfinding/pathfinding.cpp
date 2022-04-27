@@ -103,13 +103,8 @@ bool foundDest(const pos& point, const pos& dest) {
 	return (point == dest);
 }
 
-int main() {
-	pos root = { 0, 0 };
-	pos dest = { 17, 3 };
+std::vector<pos> findRoute(pos const& root, pos const& dest) {
 	visited.push_back(root);
-	std::vector<pos> obstacles = { {2, 2}, {7, 3}, {14, 7}, {19, 8}, {2, 6} };
-	setPoints(root, dest);
-	setObstacles(obstacles);
 	std::vector<pos> points = { root }; // points that we will be going over
 	std::vector<std::pair<pos, pos>> routes = {}; // connections between points that will be later used to find the route
 	std::vector<pos> route; // the final route
@@ -136,7 +131,7 @@ int main() {
 	while (next != pos{ 0, 0 }) { // get route until back to beginning
 		auto entry = std::find_if(routes.begin(), routes.end(), [&](std::pair<pos, pos> const& p) { // find the connection, so find the point which found the destination
 			return (p.second == next); // and then the point which found the point which found the destination, etc.
-		});
+			});
 		route.push_back(next); // add the point to the route
 		next = entry->first; // go to the next point
 	}
@@ -148,4 +143,14 @@ int main() {
 		printBoard();
 	}
 	else std::cout << "no route found";
+	return route;
+}
+
+int main() {
+	pos root = { 0, 0 };
+	pos dest = { 17, 3 };
+	setPoints(root, dest);
+	std::vector<pos> obstacles = { {2, 2}, {7, 3}, {14, 7}, {19, 8}, {2, 6} };
+	setObstacles(obstacles);
+	findRoute(root, dest);
 }
