@@ -107,7 +107,7 @@ int main() {
 	pos root = { 0, 0 };
 	pos dest = { 17, 3 };
 	visited.push_back(root);
-	std::vector<pos> obstacles = { /*{2, 2}, {7, 3}, {14, 7}, {19, 8}, {2, 6}*/ };
+	std::vector<pos> obstacles = { {2, 2}, {7, 3}, {14, 7}, {19, 8}, {2, 6} };
 	setPoints(root, dest);
 	setObstacles(obstacles);
 	std::vector<pos> points = { root }; // points that we will be going over
@@ -141,7 +141,7 @@ int main() {
 		next = entry->first; // go to the next point
 	}
 	std::reverse(route.begin(), route.end()); // reverses the route so from dest to root we have root to dest
-	if (route.front() == pos(0, 0)) { // if route is complete
+	if (destFound) { // if route is complete
 		for (auto const& [x, y] : route) {
 			board[y][x] = 'H';
 		}
