@@ -12,12 +12,12 @@ using board_t = std::vector<board_subt>;
 using pos = std::pair<int, int>;
 
 // variables
-const auto WIDTH = 20;
-const auto HEIGHT = 20;
+const auto WIDTH = 30;
+const auto HEIGHT = 30;
 const auto SCALE = 3;
 const bool diagonals = true;
-int obstacles_n = 200;
-int delay_ms = 10;
+int obstacles_n = 500;
+int delay_ms = 20;
 
 std::array<sf::Texture, 6> colours;
 auto& root_colour = colours[0];
@@ -221,14 +221,13 @@ std::vector<pos> findRoute(pos const& root, pos const& dest) {
 int main() {
 	for (auto i = 0; i < 6; i++)
 		colours[i].loadFromFile("./colours.png", sf::IntRect(i * 10, 0, 10, 10));
-	pos root = randomisePoint();
-	pos dest = randomisePoint(root);
-	std::vector<pos> obstacles = randomiseObstacles(root, dest, obstacles_n);
-	initBoard();
-	setObstacles(obstacles);
-	setPoints(root, dest);
-	bool found = false;
 	while (window.isOpen()) {
+		pos root = randomisePoint();
+		pos dest = randomisePoint(root);
+		std::vector<pos> obstacles = randomiseObstacles(root, dest, obstacles_n);
+		initBoard();
+		setObstacles(obstacles);
+		setPoints(root, dest);
 		sf::Event event;
 		while (window.pollEvent(event)) {
 			if (event.type == sf::Event::Closed)
@@ -237,8 +236,8 @@ int main() {
 		window.clear();
 		printBoard();
 		window.display();
-		std::vector<pos> temp;
-		if(!found) temp = findRoute(root, dest);
-		if(temp.size()) found = true;
+		findRoute(root, dest);
+		visited.clear();
+		sf::sleep(sf::seconds(2));
 	}
 }
