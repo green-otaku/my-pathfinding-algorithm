@@ -1,20 +1,35 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
-#include <Windows.h>
-#pragma warning(disable: 26812)
+#include <SFML/Graphics.hpp>
+#include <SFML/Window.hpp>
+#include <array>
+#include <random>
 
 // type shortenings
-using board_subt = std::vector<char>;
+using board_subt = std::vector<sf::Sprite>;
 using board_t = std::vector<board_subt>;
 using pos = std::pair<int, int>;
 
-// board sizes
+// variables
 const auto WIDTH = 20;
-const auto HEIGHT = 10;
+const auto HEIGHT = 20;
+const auto SCALE = 3;
+const bool diagonals = true;
+int obstacles_n = 200;
+int delay_ms = 10;
+
+std::array<sf::Texture, 6> colours;
+auto& root_colour = colours[0];
+auto& dest_colour = colours[1];
+auto& checked_colour = colours[2];
+auto& route_colour = colours[3];
+auto& obst_colour = colours[5];
+auto& empty_colour = colours[4];
 
 // board
-board_t board(HEIGHT, board_subt(WIDTH, ' '));
+board_t board(HEIGHT, board_subt(WIDTH));
+sf::RenderWindow window(sf::VideoMode(WIDTH * (SCALE * 10 + 5) - 5, HEIGHT * (SCALE * 10 + 5) - 5), "most mostowski");
 
 // vector containing the visited points
 std::vector<pos> visited;
@@ -25,31 +40,36 @@ std::vector<pos>& operator+=(std::vector<pos>& lhs, std::vector<pos> const& rhs)
 	return lhs;
 }
 
+void initBoard() {
+	for (auto i = 0; i < HEIGHT; i++) {
+		for (auto j = 0; j < WIDTH; j++) {
+			board[i][j].setTexture(empty_colour);
+			board[i][j].setScale(SCALE, SCALE);
+			board[i][j].setPosition(i * (SCALE * 10 + 5), j * (SCALE * 10 + 5));
+		}
+	}
+}
+
 // prints board
 void printBoard() {
-	for (auto i = 0; i < WIDTH + 2; i++) std::cout << '#';
-	std::cout << '\n';
 	for (auto& i : board) {
-		std::cout << '#';
 		for (auto& j : i)
-			std::cout << j;
-		std::cout << "#\n";
+			window.draw(j);
 	}
-	for (auto i = 0; i < WIDTH + 2; i++) std::cout << '#';
 }
 
 // sets points
 void setPoints(pos const& root, pos const& dest) {
 	auto const& [rx, ry] = root;
 	auto const& [dx, dy] = dest;
-	board[ry][rx] = 'o';
-	board[dy][dx] = 'x';
+	board[ry][rx].setTexture(root_colour);
+	board[dy][dx].setTexture(dest_colour);
 }
 
 // sets obstacles
 void setObstacles(const std::vector<pos>& obstacles) {
 	for (auto const& [x, y] : obstacles)
-		board[y][x] = '#';
+		board[y][x].setTexture(obst_colour);
 }
 
 // checks if a point is within board borders
@@ -66,7 +86,7 @@ bool isVisited(pos const& point) {
 
 // checks if a point is NOT an obstacle
 bool notObstacle(pos const& point) {
-	return (board[point.second][point.first] != '#');
+	return (board[point.second][point.first].getTexture() != &obst_colour);
 }
 
 /* finds neighbours of a point:
@@ -78,29 +98,69 @@ bool notObstacle(pos const& point) {
 */ 
 std::vector<pos> findNeighbours(pos centre) {
 	std::vector<pos> neighbours;
-	centre.first--; // goes to the top left corner of the point
-	centre.second--;
-	for (auto i = 0; i < 2; i++) { // goes from top left corner to top right corner so checks the entire top row
-		pos point(centre.first++, centre.second); // centre.first++ increases the x coordinate of the potential neighbour
-		if (isWithin(point) and !isVisited(point) and notObstacle(point)) neighbours.push_back(point);
+	if (diagonals) {
+		centre.first--; // goes to the top left corner of the point
+		centre.second--;
+		for (auto i = 0; i < 2; i++) { // goes from top left corner to top right corner so checks the entire top row
+			centre.first++; // centre.first++ increases the x coordinate of the potential neighbour
+			if (isWithin(centre) and !isVisited(centre) and notObstacle(centre)) neighbours.push_back(centre);
+		}
+		for (auto i = 0; i < 2; i++) { // checks the entire right columns
+			centre.second++;
+			if (isWithin(centre) and !isVisited(centre) and notObstacle(centre)) neighbours.push_back(centre);
+		}
+		for (auto i = 0; i < 2; i++) { // checks the bottom row
+			centre.first--;
+			if (isWithin(centre) and !isVisited(centre) and notObstacle(centre)) neighbours.push_back(centre);
+		}
+		for (auto i = 0; i < 2; i++) { // checks the left column
+			centre.second--;
+			if (isWithin(centre) and !isVisited(centre) and notObstacle(centre)) neighbours.push_back(centre);
+		}
 	}
-	for (auto i = 0; i < 2; i++) { // checks the entire right columns
-		pos point(centre.first, centre.second++);
-		if (isWithin(point) and !isVisited(point) and notObstacle(point)) neighbours.push_back(point);
-	}
-	for (auto i = 0; i < 2; i++) { // checks the bottom row
-		pos point(centre.first--, centre.second);
-		if (isWithin(point) and !isVisited(point) and notObstacle(point)) neighbours.push_back(point);
-	}
-	for (auto i = 0; i < 2; i++) { // checks the left column
-		pos point(centre.first, centre.second--);
-		if (isWithin(point) and !isVisited(point) and notObstacle(point)) neighbours.push_back(point);
+	else {
+		centre.second--;
+		if (isWithin(centre) and !isVisited(centre) and notObstacle(centre)) neighbours.push_back(centre);
+		centre.second++;
+		centre.first++;
+		if (isWithin(centre) and !isVisited(centre) and notObstacle(centre)) neighbours.push_back(centre);
+		centre.second++;
+		centre.first--;
+		if (isWithin(centre) and !isVisited(centre) and notObstacle(centre)) neighbours.push_back(centre);
+		centre.second--;
+		centre.first--;
+		if (isWithin(centre) and !isVisited(centre) and notObstacle(centre)) neighbours.push_back(centre);
 	}
 	return neighbours;
 }
 
 bool foundDest(const pos& point, const pos& dest) {
 	return (point == dest);
+}
+
+pos randomisePoint(pos other = { -1, -1 }) {
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<> disx(0, WIDTH - 1);
+	std::uniform_int_distribution<> disy(0, HEIGHT - 1);
+	pos point(disx(gen), disy(gen));
+	if (point == other) return randomisePoint(point);
+	else return point;
+}
+
+std::vector<pos> randomiseObstacles(pos root, pos dest, int number = -1) {
+	std::vector<pos> obstacles;
+	if (number == -1) return obstacles;
+	obstacles.reserve(number);
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<> disx(0, WIDTH - 1);
+	std::uniform_int_distribution<> disy(0, HEIGHT - 1);
+	for (auto i = 0; i < number; i++) {
+		auto point = pos{ disx(gen), disy(gen) };
+		if (point != root and point != dest) obstacles.push_back(point);
+	}
+	return obstacles;
 }
 
 std::vector<pos> findRoute(pos const& root, pos const& dest) {
@@ -111,46 +171,74 @@ std::vector<pos> findRoute(pos const& root, pos const& dest) {
 	int it = 0; // iterator going over each element in points
 	auto cur = points[0]; // current point
 	bool destFound = false;
+	bool noRoute = false;
 	while (true) {
-		system("cls");
 		auto neighbours = findNeighbours(cur); // finds neighbours for the current point
 		for (auto const& [x, y] : neighbours) {
 			routes.push_back({ cur, pos(x, y) }); // adds the connection to routes
 			visited.push_back(pos(x, y)); // adds the point to visited points
 			if (foundDest(pos(x, y), dest)) destFound = true; // if destination found end loop
-			board[y][x] = '+';
+			board[y][x].setTexture(checked_colour);
 		}
 		if (destFound) break;
 		points += neighbours; // adds neighbours to points
+		if (it >= points.size()) noRoute = true;
+		if (noRoute) break;
 		cur = points[it++]; // checks next point
+		window.clear();
 		printBoard();
+		window.display();
+		sf::sleep(sf::Time(sf::milliseconds(delay_ms)));
 		if (cur == pos{ -1, -1 }) break; // idk
 	}
-	// finds route
-	auto next = dest; // start from the end
-	while (next != pos{ 0, 0 }) { // get route until back to beginning
-		auto entry = std::find_if(routes.begin(), routes.end(), [&](std::pair<pos, pos> const& p) { // find the connection, so find the point which found the destination
-			return (p.second == next); // and then the point which found the point which found the destination, etc.
-			});
-		route.push_back(next); // add the point to the route
-		next = entry->first; // go to the next point
-	}
-	std::reverse(route.begin(), route.end()); // reverses the route so from dest to root we have root to dest
-	if (destFound) { // if route is complete
-		for (auto const& [x, y] : route) {
-			board[y][x] = 'H';
+	if (!noRoute) {
+		// finds route
+		auto next = dest; // start from the end
+		while (next != pos{ 0, 0 }) { // get route until back to beginning
+			auto entry = std::find_if(routes.begin(), routes.end(), [&](std::pair<pos, pos> const& p) { // find the connection, so find the point which found the destination
+				return (p.second == next); // and then the point which found the point which found the destination, etc.
+				});
+			route.push_back(next); // add the point to the route
+			if (entry == routes.end()) break;
+			next = entry->first; // go to the next point
 		}
-		printBoard();
+		std::reverse(route.begin(), route.end()); // reverses the route so from dest to root we have root to dest
+		if (destFound) { // if route is complete
+			for (auto i = 1; i < route.size() - 1; i++) {
+				auto const& [x, y] = route[i];
+				board[y][x].setTexture(route_colour);
+				window.clear();
+				printBoard();
+				setPoints(root, dest);
+				window.display();
+				sf::sleep(sf::Time(sf::milliseconds(delay_ms)));
+			}
+		}
 	}
-	else std::cout << "no route found";
 	return route;
 }
 
 int main() {
-	pos root = { 0, 0 };
-	pos dest = { 17, 3 };
-	setPoints(root, dest);
-	std::vector<pos> obstacles = { {2, 2}, {7, 3}, {14, 7}, {19, 8}, {2, 6} };
+	for (auto i = 0; i < 6; i++)
+		colours[i].loadFromFile("./colours.png", sf::IntRect(i * 10, 0, 10, 10));
+	pos root = randomisePoint();
+	pos dest = randomisePoint(root);
+	std::vector<pos> obstacles = randomiseObstacles(root, dest, obstacles_n);
+	initBoard();
 	setObstacles(obstacles);
-	findRoute(root, dest);
+	setPoints(root, dest);
+	bool found = false;
+	while (window.isOpen()) {
+		sf::Event event;
+		while (window.pollEvent(event)) {
+			if (event.type == sf::Event::Closed)
+				window.close();
+		}
+		window.clear();
+		printBoard();
+		window.display();
+		std::vector<pos> temp;
+		if(!found) temp = findRoute(root, dest);
+		if(temp.size()) found = true;
+	}
 }
